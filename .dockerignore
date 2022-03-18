@@ -1,0 +1,14 @@
+build/
+node_modules/
+
+*.swp
+
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.npm
+
+.env
+.env*

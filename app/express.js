@@ -1,7 +1,7 @@
 const { Doc } = require('./sequelize');
-const { generatePdf } = require('./pdf');
 const { validateUrl, createHash } = require('./utils');
-const { retrieveFile, storeFile } = require('./storage');
+const { retrieveFile } = require('./storage');
+const { createNewPdf } = require('./pdf-queue');
 
 const handleGeneratePdf = async (req, res, next) => {
     try {
@@ -44,9 +44,10 @@ const handleGeneratePdf = async (req, res, next) => {
             }
             if (doc.status === 'processed') {
                 const pdf = await retrieveFile(urlHash);
+                const fileName = urlHash.slice(0, 10);
                 // res.setHeader('Content-Length', pdf.size);
                 res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', 'attachment; filename=quote.pdf');
+                res.setHeader('Content-Disposition', `attachment; filename=extracted${fileName}.pdf`);
                 res.status(200).send(pdf);
                 return;
             }
@@ -62,22 +63,8 @@ const handleGeneratePdf = async (req, res, next) => {
         res.status(200).send({
             message: 'The url is queued for processing',
         });
+        await  createNewPdf({ url, urlHash });
 
-        try {
-            const pdf = await generatePdf(url);
-            await storeFile(urlHash, pdf);
-
-            await Doc.update(
-                { hash: urlHash, status: 'processed' },
-                { where: { hash: urlHash } },
-            );
-        } catch (err) {
-            console.error(err);
-            await Doc.update(
-                { hash: urlHash, status: 'failed' },
-                { where: { hash: urlHash } },
-            );
-        }
     } catch (baseErr) {
         next(baseErr);
     }

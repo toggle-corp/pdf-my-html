@@ -1,7 +1,8 @@
 const Queue = require('bull');
 const { pdfProcess } = require('./pdf-queue-consumer');
 
-const generatePdfQueue = new Queue('generate-pdf', 'redis://redis:6379/0');
+const redisUrl = process.env.REDIS_SERVER_URL;
+const generatePdfQueue = new Queue('generate-pdf', redisUrl);
 
 generatePdfQueue.process(pdfProcess);
 

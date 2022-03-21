@@ -63,7 +63,7 @@ const handleGeneratePdf = async (req, res, next) => {
         res.status(200).send({
             message: 'The url is queued for processing',
         });
-        await  createNewPdf({ url, urlHash });
+        await createNewPdf({ url, urlHash });
 
     } catch (baseErr) {
         next(baseErr);

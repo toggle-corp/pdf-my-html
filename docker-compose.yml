@@ -14,10 +14,13 @@ services:
   server:
     build:
       context: ./
-    command: node server.js
+    command: yarn nodemon server.js
+    env_file:
+      - .env
     volumes:
       - sqlite:/sqlite
       - pdfs:/pdfs
+      - .:/code
     ports:
       - '8000:8000'
     depends_on:

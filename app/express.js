@@ -1,12 +1,12 @@
 const { Doc } = require('./sequelize');
 const { validateUrl, createHash } = require('./utils');
-const { retrieveFile } = require('./storage');
-const { createNewPdf } = require('./pdf-queue');
+const { retrieveFile, retrieveFilePath } = require('./storage');
+const { generatePdfQueue } = require('./bull');
 
-const handleGeneratePdf = async (req, res, next) => {
+const handleCacheGet = async (req, res, next) => {
     try {
-        console.info('Receiving:', req.url);
-        const { url } = req.query;
+        console.info('[express] Receiving:', req.url);
+        const url = decodeURI(req.query.url);
 
         if (!url) {
             res.status(400).send({
@@ -21,55 +21,111 @@ const handleGeneratePdf = async (req, res, next) => {
             return;
         }
 
-        const urlHash = createHash(url);
+        const hash = createHash(url);
 
         const doc = await Doc.findOne({
             where: {
-                hash: urlHash,
+                hash,
             },
         });
 
-        if (doc) {
-            if (doc.status === 'pending') {
-                res.status(200).send({
-                    message: 'The url is being processed.',
-                });
-                return;
-            }
-            if (doc.status === 'failed') {
-                res.status(200).send({
-                    message: 'Could not generate pdf from url.',
-                });
-                return;
-            }
-            if (doc.status === 'processed') {
-                const pdf = await retrieveFile(urlHash);
-                const fileName = urlHash.slice(0, 10);
-                // res.setHeader('Content-Length', pdf.size);
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', `attachment; filename=extracted${fileName}.pdf`);
-                res.status(200).send(pdf);
-                return;
-            }
-
-            res.status(500).send({
-                message: 'We do not know what happened.',
+        if (!doc) {
+            res.status(404).send({
+                message: 'Could not find cache for this url',
             });
             return;
         }
 
-        await Doc.create({ hash: urlHash, status: 'pending' });
+        // NOTE: should change this when storage is switched to aws
+        res.status(200).send({
+            ...doc.dataValues,
+            url: retrieveFilePath(req, doc.hash),
+        });
+    } catch (baseErr) {
+        next(baseErr);
+    }
+};
+
+const handleCachePost = async (req, res, next) => {
+    try {
+        console.info('[express] Receiving:', req.url);
+        const url = decodeURI(req.body.url);
+
+        if (!url) {
+            res.status(400).send({
+                message: 'url query is required',
+            });
+            return;
+        }
+        if (!validateUrl(url)) {
+            res.status(400).send({
+                message: `url query is invalid: ${url}`,
+            });
+            return;
+        }
+
+        const hash = createHash(url);
+
+        const doc = await Doc.findOne({
+            where: {
+                hash,
+            },
+        });
+
+        if (doc) {
+            res.status(400).send({
+                message: 'The url is already queued for processing',
+            });
+            return;
+        }
+
+        await Doc.create({ hash, status: 'pending' });
+        generatePdfQueue.add({ url, urlHash: hash });
 
         res.status(200).send({
             message: 'The url is queued for processing',
         });
-        await createNewPdf({ url, urlHash });
+    } catch (baseErr) {
+        next(baseErr);
+    }
+};
 
+// NOTE: only used for local development
+const handleCacheFileGet = async (req, res, next) => {
+    try {
+        console.info('[express] Receiving:', req.url);
+        const hash = decodeURI(req.query.hash);
+
+        if (!hash) {
+            res.status(400).send({
+                message: 'hash query is required',
+            });
+            return;
+        }
+
+        const doc = await Doc.findOne({
+            where: {
+                hash,
+            },
+        });
+
+        if (!doc || doc.status !== 'processed') {
+            res.status(500).send('We do not have a cache for this url');
+            return;
+        }
+
+        const pdf = await retrieveFile(hash);
+        const fileName = hash.slice(0, 10);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=extracted${fileName}.pdf`);
+        res.status(200).send(pdf);
     } catch (baseErr) {
         next(baseErr);
     }
 };
 
 module.exports = {
-    handleGeneratePdf,
+    handleCacheGet,
+    handleCachePost,
+    handleCacheFileGet,
 };

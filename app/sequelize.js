@@ -5,6 +5,7 @@ const { Sequelize, Model, DataTypes } = require('sequelize');
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: '/sqlite/database.sqlite',
+    logging: false,
 });
 
 class Doc extends Model {}
@@ -23,6 +24,11 @@ Doc.init(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        timedout: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
         createdAt: {
             type: Sequelize.DATEONLY,
             allowNull: false,
@@ -37,7 +43,7 @@ const syncOptions = {};
 
 // drop the table if it already exists
 sequelize.sync(syncOptions).then(() => {
-    console.info('Syncing db');
+    console.info('[sequelize] Syncing db');
 });
 
 module.exports = {

@@ -5,18 +5,18 @@ const { generatePdfQueue } = require('./bull');
 
 const handleCacheGet = async (req, res, next) => {
     try {
-        console.info('[express] Receiving:', req.url);
+        console.info(`[express] ${req.method} ${req.url}`);
         const url = decodeURI(req.query.url);
 
         if (!url) {
             res.status(400).send({
-                message: 'url query is required',
+                message: '"url" is required.',
             });
             return;
         }
         if (!validateUrl(url)) {
             res.status(400).send({
-                message: `url query is invalid: ${url}`,
+                message: `"${url}" is not a valid URL.`,
             });
             return;
         }
@@ -31,7 +31,7 @@ const handleCacheGet = async (req, res, next) => {
 
         if (!doc) {
             res.status(404).send({
-                message: 'Could not find cache for this url',
+                message: `Cache for "${url}" not found.`,
             });
             return;
         }
@@ -48,18 +48,18 @@ const handleCacheGet = async (req, res, next) => {
 
 const handleCachePost = async (req, res, next) => {
     try {
-        console.info('[express] Receiving:', req.url);
+        console.info(`[express] ${req.method} ${req.url}`);
         const url = decodeURI(req.body.url);
 
         if (!url) {
             res.status(400).send({
-                message: 'url query is required',
+                message: '"url" is required.',
             });
             return;
         }
         if (!validateUrl(url)) {
             res.status(400).send({
-                message: `url query is invalid: ${url}`,
+                message: `"${url}" is not a valid URL.`,
             });
             return;
         }
@@ -73,18 +73,21 @@ const handleCachePost = async (req, res, next) => {
         });
 
         if (doc) {
-            res.status(400).send({
-                message: 'The url is already queued for processing',
+            // NOTE: should change this when storage is switched to aws
+            res.status(200).send({
+                ...doc.dataValues,
+                url: retrieveFilePath(req, doc.hash),
             });
             return;
         }
 
-        await Doc.create({ hash, status: 'pending' });
-        generatePdfQueue.add({ url, urlHash: hash });
-
+        const newDoc = await Doc.create({ hash, status: 'pending' });
         res.status(200).send({
-            message: 'The url is queued for processing',
+            ...newDoc.dataValues,
+            url: retrieveFilePath(req, newDoc.hash),
         });
+
+        generatePdfQueue.add({ url, urlHash: hash });
     } catch (baseErr) {
         next(baseErr);
     }
@@ -93,12 +96,12 @@ const handleCachePost = async (req, res, next) => {
 // NOTE: only used for local development
 const handleCacheFileGet = async (req, res, next) => {
     try {
-        console.info('[express] Receiving:', req.url);
+        console.info(`[express] ${req.method} ${req.url}`);
         const hash = decodeURI(req.query.hash);
 
         if (!hash) {
             res.status(400).send({
-                message: 'hash query is required',
+                message: '"hash" is required.',
             });
             return;
         }
@@ -110,14 +113,14 @@ const handleCacheFileGet = async (req, res, next) => {
         });
 
         if (!doc || doc.status !== 'processed') {
-            res.status(500).send('We do not have a cache for this url');
+            res.status(500).send(`File for "${hash}" not found.`);
             return;
         }
 
         const pdf = await retrieveFile(hash);
         const fileName = hash.slice(0, 10);
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=extracted${fileName}.pdf`);
+        res.setHeader('Content-Disposition', `inline; filename=extracted${fileName}.pdf`);
         res.status(200).send(pdf);
     } catch (baseErr) {
         next(baseErr);

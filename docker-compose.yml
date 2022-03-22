@@ -22,7 +22,7 @@ services:
       - pdfs:/pdfs
       - .:/code
     ports:
-      - '8000:8000'
+      - '8081:8000'
     depends_on:
       - redis
 

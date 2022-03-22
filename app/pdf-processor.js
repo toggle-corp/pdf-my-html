@@ -14,8 +14,8 @@ module.exports = async function pdfProcessor(job) {
         );
         return value;
     } catch (err) {
-        console.log('[bull] Some error occurred while processing', job.data.url);
-        console.log(err);
+        console.error('[bull] Some error occurred while processing', job.data.url);
+        console.error(err);
 
         const value = await Doc.update(
             { hash: job.data.urlHash, status: 'failed' },

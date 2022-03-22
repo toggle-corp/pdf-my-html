@@ -36,6 +36,7 @@ async function generatePdf(url) {
     try {
         await page.goto(url, { waitUntil: 'networkidle0' });
     } catch (err) {
+        console.error('[puppeteer] Error navigating to page');
         console.error(err);
         timedout = true;
     }

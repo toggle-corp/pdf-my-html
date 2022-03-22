@@ -2,13 +2,17 @@ const Queue = require('bull');
 const path = require('path');
 // const pdfProcessor = require('./pdf-processor');
 
-const redisUrl = process.env.REDIS_SERVER_URL;
+const redisUrl = process.env.REDIS_SERVER_URL || 'redis://redis:6379/0';
+const parallelProcesses = process.env.PDF_PARALLEL_PROCESSES
+    ? Number(process.env.PDF_PARALLEL_PROCESSES)
+    : 4;
+
 const generatePdfQueue = new Queue('generate-pdf', redisUrl);
 
 const processorPath = path.join(global.APP_ROOT, 'app/pdf-processor');
 
 // generatePdfQueue.process(pdfProcessor);
-generatePdfQueue.process(4, processorPath);
+generatePdfQueue.process(parallelProcesses, processorPath);
 
 generatePdfQueue.on('completed', () => {
     console.info('[bull] A job was completed');

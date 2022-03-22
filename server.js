@@ -1,4 +1,5 @@
 const path = require('path');
+
 global.APP_ROOT = path.resolve(__dirname);
 
 const express = require('express');
@@ -12,12 +13,13 @@ const {
 } = require('./app/express');
 
 const PORT = 8000;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:8081';
 
 const app = express();
 
 app.use(bodyParser.json());
 app.use(cors({
-    origin: 'http://localhost:8081',
+    origin: CORS_ORIGIN,
 }));
 
 app.listen(PORT, () => {

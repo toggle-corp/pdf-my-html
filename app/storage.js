@@ -15,6 +15,7 @@ async function storeFile(identifier, pdf) {
             Bucket: process.env.S3_BUCKET_NAME,
             Key: identifier,
             Body: pdf,
+            ContentType: 'application/pdf',
         }).promise();
         return response;
     }

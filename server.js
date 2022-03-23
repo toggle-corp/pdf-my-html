@@ -23,10 +23,8 @@ const whitelist = process.env.CORS_WHITELIST ? JSON.parse(process.env.CORS_WHITE
 const corsOptions = {
     origin: (origin, callback) => {
         if (!origin || whitelist.includes(origin)) {
-            console.info('[cors] Allowing access');
             callback(null, true);
         } else {
-            console.info('[cors] Restricting access');
             callback(new Error('Not allowed by CORS'));
         }
     },

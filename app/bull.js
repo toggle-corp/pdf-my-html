@@ -15,17 +15,17 @@ const processorPath = path.join(global.APP_ROOT, 'app/pdf-processor');
 generatePdfQueue.process(parallelProcesses, processorPath);
 
 generatePdfQueue.on('completed', () => {
-    console.info('[bull] A job was completed');
+    console.info('[bull] A job was completed.');
 });
 generatePdfQueue.on('active', () => {
-    console.info('[bull] A job was started');
+    console.info('[bull] A job was started.');
 });
 generatePdfQueue.on('failed', (job, err) => {
     console.error('[bull] A job failed!');
     console.error(err);
 });
 generatePdfQueue.on('global:completed', () => {
-    console.info('[bull] All jobs were completed');
+    console.info('[bull] There are no more jobs.');
 });
 
 module.exports = {

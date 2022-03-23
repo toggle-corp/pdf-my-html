@@ -19,11 +19,14 @@ const app = express();
 const whitelist = process.env.CORS_WHITELIST ? JSON.parse(process.env.CORS_WHITELIST) : [
     'http://localhost:3000',
 ];
+
 const corsOptions = {
     origin: (origin, callback) => {
         if (!origin || whitelist.includes(origin)) {
+            console.info('[cors] Allowing access');
             callback(null, true);
         } else {
+            console.info('[cors] Restricting access');
             callback(new Error('Not allowed by CORS'));
         }
     },
@@ -31,6 +34,7 @@ const corsOptions = {
 
 app.use(bodyParser.json());
 app.use(cors(corsOptions));
+// app.options('*', cors(corsOptions));
 
 app.listen(PORT, () => {
     console.info(`[express] Server is running on PORT ${PORT}`);

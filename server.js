@@ -13,14 +13,24 @@ const {
 } = require('./app/express');
 
 const PORT = 8000;
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:8081';
 
 const app = express();
 
+const whitelist = process.env.CORS_WHITELIST ? JSON.parse(process.env.CORS_WHITELIST) : [
+    'http://localhost:3000',
+];
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (!origin || whitelist.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+};
+
 app.use(bodyParser.json());
-app.use(cors({
-    origin: CORS_ORIGIN,
-}));
+app.use(cors(corsOptions));
 
 app.listen(PORT, () => {
     console.info(`[express] Server is running on PORT ${PORT}`);

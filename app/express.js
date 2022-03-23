@@ -1,88 +1,134 @@
 const { Doc } = require('./sequelize');
-const { generatePdf } = require('./pdf');
 const { validateUrl, createHash } = require('./utils');
-const { retrieveFile, storeFile } = require('./storage');
+const { retrieveFile, retrieveFilePath } = require('./storage');
+const { generatePdfQueue } = require('./bull');
 
-const handleGeneratePdf = async (req, res, next) => {
+const handleCacheGet = async (req, res, next) => {
     try {
-        console.info('Receiving:', req.url);
-        const { url } = req.query;
+        console.info(`[express] ${req.method} ${req.url}`);
+        const url = decodeURI(req.query.url);
 
         if (!url) {
             res.status(400).send({
-                message: 'url query is required',
+                message: '"url" is required.',
             });
             return;
         }
         if (!validateUrl(url)) {
             res.status(400).send({
-                message: `url query is invalid: ${url}`,
+                message: `"${url}" is not a valid URL.`,
             });
             return;
         }
 
-        const urlHash = createHash(url);
+        const hash = createHash(url);
 
         const doc = await Doc.findOne({
             where: {
-                hash: urlHash,
+                hash,
+            },
+        });
+
+        if (!doc) {
+            res.status(404).send({
+                message: `Cache for "${url}" not found.`,
+            });
+            return;
+        }
+
+        // NOTE: should change this when storage is switched to aws
+        res.status(200).send({
+            ...doc.dataValues,
+            url: retrieveFilePath(req, doc.hash),
+        });
+    } catch (baseErr) {
+        next(baseErr);
+    }
+};
+
+const handleCachePost = async (req, res, next) => {
+    try {
+        console.info(`[express] ${req.method} ${req.url}`);
+        const url = decodeURI(req.body.url);
+
+        if (!url) {
+            res.status(400).send({
+                message: '"url" is required.',
+            });
+            return;
+        }
+        if (!validateUrl(url)) {
+            res.status(400).send({
+                message: `"${url}" is not a valid URL.`,
+            });
+            return;
+        }
+
+        const hash = createHash(url);
+
+        const doc = await Doc.findOne({
+            where: {
+                hash,
             },
         });
 
         if (doc) {
-            if (doc.status === 'pending') {
-                res.status(200).send({
-                    message: 'The url is being processed.',
-                });
-                return;
-            }
-            if (doc.status === 'failed') {
-                res.status(200).send({
-                    message: 'Could not generate pdf from url.',
-                });
-                return;
-            }
-            if (doc.status === 'processed') {
-                const pdf = await retrieveFile(urlHash);
-                // res.setHeader('Content-Length', pdf.size);
-                res.setHeader('Content-Type', 'application/pdf');
-                res.setHeader('Content-Disposition', 'attachment; filename=quote.pdf');
-                res.status(200).send(pdf);
-                return;
-            }
-
-            res.status(500).send({
-                message: 'We do not know what happened.',
+            // NOTE: should change this when storage is switched to aws
+            res.status(200).send({
+                ...doc.dataValues,
+                url: retrieveFilePath(req, doc.hash),
             });
             return;
         }
 
-        await Doc.create({ hash: urlHash, status: 'pending' });
-
+        const newDoc = await Doc.create({ hash, status: 'pending' });
         res.status(200).send({
-            message: 'The url is queued for processing',
+            ...newDoc.dataValues,
+            url: retrieveFilePath(req, newDoc.hash),
         });
 
-        try {
-            const pdf = await generatePdf(url);
-            await storeFile(urlHash, pdf);
+        generatePdfQueue.add({ url, urlHash: hash });
+    } catch (baseErr) {
+        next(baseErr);
+    }
+};
 
-            await Doc.update(
-                { hash: urlHash, status: 'processed' },
-                { where: { hash: urlHash } },
-            );
-        } catch (err) {
-            console.error(err);
-            await Doc.update(
-                { hash: urlHash, status: 'failed' },
-                { where: { hash: urlHash } },
-            );
+// NOTE: only used for local development
+const handleCacheFileGet = async (req, res, next) => {
+    try {
+        console.info(`[express] ${req.method} ${req.url}`);
+        const hash = decodeURI(req.query.hash);
+
+        if (!hash) {
+            res.status(400).send({
+                message: '"hash" is required.',
+            });
+            return;
         }
+
+        const doc = await Doc.findOne({
+            where: {
+                hash,
+            },
+        });
+
+        if (!doc || doc.status !== 'processed') {
+            res.status(500).send(`File for "${hash}" not found.`);
+            return;
+        }
+
+        const pdf = await retrieveFile(hash);
+        const fileName = hash.slice(0, 10);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename=extracted${fileName}.pdf`);
+        res.status(200).send(pdf);
     } catch (baseErr) {
         next(baseErr);
     }
 };
 
 module.exports = {
-    handleGeneratePdf,
+    handleCacheGet,
+    handleCachePost,
+    handleCacheFileGet,
 };

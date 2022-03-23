@@ -14,15 +14,14 @@ services:
   server:
     build:
       context: ./
-    command: yarn nodemon server.js
+    command: node server.js
     env_file:
       - .env
     volumes:
       - sqlite:/sqlite
       - pdfs:/pdfs
-      - .:/code
     ports:
-      - '8081:8000'
+      - '8000:8000'
     depends_on:
       - redis
 

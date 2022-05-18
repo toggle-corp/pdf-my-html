@@ -3,6 +3,17 @@ const { validateUrl, createHash } = require('./utils');
 const { retrieveFile, retrieveFilePath } = require('./storage');
 const { generatePdfQueue } = require('./bull');
 
+const handleHealthCheckGet = async (req, res, next) => {
+    try {
+        console.info(`[express] ${req.method} ${req.url}`);
+        res.status(200).send({
+            message: 'I am healthy.',
+        });
+    } catch (baseErr) {
+        next(baseErr);
+    }
+};
+
 const handleCacheGet = async (req, res, next) => {
     try {
         console.info(`[express] ${req.method} ${req.url}`);
@@ -128,6 +139,7 @@ const handleCacheFileGet = async (req, res, next) => {
 };
 
 module.exports = {
+    handleHealthCheckGet,
     handleCacheGet,
     handleCachePost,
     handleCacheFileGet,

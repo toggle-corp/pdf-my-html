@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 
 const {
+    handleHealthCheckGet,
     handleCacheGet,
     handleCachePost,
     handleCacheFileGet,
@@ -38,9 +39,17 @@ app.listen(PORT, () => {
     console.info(`[express] Server is running on PORT ${PORT}`);
 });
 
+app.get('/health-check/', handleHealthCheckGet);
 app.get('/cache/', handleCacheGet);
 app.post('/cache/', handleCachePost);
 app.get('/cache-file/', handleCacheFileGet);
+
+// FIXME: How does express differentiate between a 404 handler and global error handler?
+app.use((req, res, next) => {
+    res.status(404).send({
+        message: 'Resource not found',
+    });
+});
 
 app.use((err, _, res, next) => {
     if (res.headersSent) {

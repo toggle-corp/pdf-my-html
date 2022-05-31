@@ -14,7 +14,7 @@ services:
   server:
     build:
       context: ./
-    command: node server.js
+    command: yarn start
     env_file:
       - .env
     volumes:

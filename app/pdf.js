@@ -4,16 +4,15 @@ async function generatePdf(url) {
     // console.log('[puppeteer] Opening browser');
     const browser = await puppeteer.launch({
         headless: true,
+        ignoreDefaultArgs: ['--disable-extensions', '--enable-automation'],
         args: [
             '--no-sandbox', // root cannot run puppeteer without --no-sandbox
             '--disable-setuid-sandbox',
             '--disable-accelerated-2d-canvas',
             '--disable-gpu',
-
             // NOTE: "I don't care about cookies" extension
             '--load-extensions=fihnjjcciajhdojfnbdddfaoknhalnja',
         ],
-        ignoreDefaultArgs: ['--disable-extensions'],
     });
 
     // console.log('[puppeteer] Creating incognito context');

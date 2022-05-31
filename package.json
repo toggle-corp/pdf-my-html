@@ -4,6 +4,7 @@
   "description": "Convert html to pdf",
   "scripts": {
     "lint": "eslint ./app",
+    "start:dev": "nodemon server.js",
     "start": "node server.js"
   },
   "dependencies": {

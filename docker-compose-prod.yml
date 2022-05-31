@@ -5,6 +5,7 @@ services:
     image: redis:latest
     volumes:
       - redis-data:/data
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping"]
       interval: 10s
@@ -14,12 +15,13 @@ services:
   server:
     build:
       context: ./
-    command: node server.js
+    command: yarn start
     env_file:
       - .env
     volumes:
       - sqlite:/sqlite
       - pdfs:/pdfs
+    restart: unless-stopped
     ports:
       - '8000:8000'
     depends_on:

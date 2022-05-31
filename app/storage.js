@@ -1,22 +1,25 @@
-const AWS = require('aws-sdk');
+const AWS = require('@aws-sdk/client-s3');
 
 const fs = require('fs').promises;
 const path = require('path');
 
-const s3 = process.env.S3_BUCKET_NAME ? new AWS.S3({
+// Create an Amazon S3 service client object.
+const s3Client = process.env.S3_BUCKET_NAME ? new AWS.S3Client({
     accessKeyId: process.env.S3_ID,
     secretAccessKey: process.env.S3_SECRET,
 }) : undefined;
 
 async function storeFile(identifier, pdf) {
-    if (s3) {
+    if (s3Client) {
         console.info('[s3] Uploading file at', process.env.S3_BUCKET_NAME, identifier);
-        const response = await s3.upload({
-            Bucket: process.env.S3_BUCKET_NAME,
-            Key: identifier,
-            Body: pdf,
-            ContentType: 'application/pdf',
-        }).promise();
+        const response = await s3Client.send(
+            new AWS.PutObjectCommand({
+                Bucket: process.env.S3_BUCKET_NAME,
+                Key: identifier,
+                Body: pdf,
+                ContentType: 'application/pdf',
+            })
+        );
         return response;
     }
     const location = path.join('/pdfs', identifier);
@@ -26,7 +29,7 @@ async function storeFile(identifier, pdf) {
 }
 
 async function retrieveFile(identifier) {
-    if (s3) {
+    if (s3Client) {
         // NOTE: we do not need to handle this case
         return undefined;
     }
@@ -38,7 +41,7 @@ async function retrieveFile(identifier) {
 }
 
 function retrieveFilePath(req, identifier) {
-    if (s3) {
+    if (s3Client) {
         return `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${identifier}`;
     }
 

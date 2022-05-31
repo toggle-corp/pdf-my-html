@@ -14,7 +14,7 @@ services:
   server:
     build:
       context: ./
-    command: yarn nodemon server.js
+    command: yarn start:dev
     env_file:
       - .env
     volumes:

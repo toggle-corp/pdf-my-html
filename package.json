@@ -4,7 +4,8 @@
   "description": "Convert html to pdf",
   "scripts": {
     "lint": "eslint ./app",
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:dev": "NODE_ENV=development yarn install && nodemon server.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.100.0",

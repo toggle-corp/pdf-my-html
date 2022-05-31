@@ -5,6 +5,7 @@ const path = require('path');
 
 // Create an Amazon S3 service client object.
 const s3Client = process.env.S3_BUCKET_NAME ? new AWS.S3Client({
+    region: process.env.S3_REGION,
     accessKeyId: process.env.S3_ID,
     secretAccessKey: process.env.S3_SECRET,
 }) : undefined;
